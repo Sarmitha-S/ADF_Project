@@ -1,20 +1,35 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# **Azure Data Factory Project with DevOps**
+![ADF Project Banner](ADF-Architecture.png)
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+---
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+## 🚀 **Project Summary**
+This project focuses on ingesting data from multiple sources — **On-Prem**, **Azure SQL**, and **API** — while automating the end-to-end **ETL workflow** using **Azure Data Factory (ADF)**.  
+The architecture follows a **Medallion Architecture** (Bronze → Silver → Gold) to ensure structured, incremental data refinement at each stage.
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+---
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+## 🧩 **Project Overview**
+- Multi-source data ingestion  
+- Automated ETL orchestration  
+- Medallion architecture for data processing  
+- Data transformation and standardization  
+- Analytics-ready Gold layer  
+- Azure DevOps integration for CI/CD  
+
+---
+
+## 🛠️ **Technology Stack**
+- **Azure Data Factory**  
+- **Azure SQL Database**  
+- **Azure Data Lake Storage Gen2**  
+- **Delta Lake**  
+- **Azure Logic Apps**  
+- **Azure DevOps**  
+- **Git**  
+
+---
+
+## 🤝 **Contribute**
+Found something that can be improved?  
+Open an **issue** or submit a **pull request** — every contribution helps the project grow!  
