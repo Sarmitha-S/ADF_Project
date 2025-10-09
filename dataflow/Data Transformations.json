@@ -1,0 +1,320 @@
+{
+	"name": "Data Transformations",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "src_dimcategory",
+						"type": "DatasetReference"
+					},
+					"name": "DimCategory"
+				},
+				{
+					"dataset": {
+						"referenceName": "src_dimcustomer",
+						"type": "DatasetReference"
+					},
+					"name": "DimCustomer"
+				},
+				{
+					"dataset": {
+						"referenceName": "src_dimproduct",
+						"type": "DatasetReference"
+					},
+					"name": "DimProduct"
+				},
+				{
+					"dataset": {
+						"referenceName": "src_dimsupplier",
+						"type": "DatasetReference"
+					},
+					"name": "DimSupplier"
+				},
+				{
+					"dataset": {
+						"referenceName": "src_factorders",
+						"type": "DatasetReference"
+					},
+					"name": "FactOrders"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink2"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink3"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink4"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink5"
+				}
+			],
+			"transformations": [
+				{
+					"name": "FilterCat",
+					"description": "!isAdd expression for the filter"
+				},
+				{
+					"name": "FilterCust"
+				},
+				{
+					"name": "FilterProd"
+				},
+				{
+					"name": "derivedColumnCountry"
+				},
+				{
+					"name": "derivedColumnGender"
+				},
+				{
+					"name": "derivedColumnAgegroup"
+				},
+				{
+					"name": "select"
+				},
+				{
+					"name": "derivedColumnFirstname"
+				},
+				{
+					"name": "ReorderCols"
+				},
+				{
+					"name": "castPrice"
+				},
+				{
+					"name": "casttotalamt"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "alterRow2"
+				},
+				{
+					"name": "alterRow3"
+				},
+				{
+					"name": "alterRow4"
+				},
+				{
+					"name": "alterRow5"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          category_id as short,",
+				"          category_name as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimCategory",
+				"source(output(",
+				"          customer_id as short,",
+				"          full_name as string,",
+				"          gender as string,",
+				"          age as short,",
+				"          country as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimCustomer",
+				"source(output(",
+				"          product_id as short,",
+				"          product_name as string,",
+				"          category as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimProduct",
+				"source(output(",
+				"          city as string,",
+				"          country as string,",
+				"          supplier_id as short,",
+				"          supplier_name as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     documentForm: 'arrayOfDocuments') ~> DimSupplier",
+				"source(output(",
+				"          order_id as integer,",
+				"          customer_id as integer,",
+				"          product_id as integer,",
+				"          supplier_id as integer,",
+				"          category_id as integer,",
+				"          order_date as date,",
+				"          quantity as integer,",
+				"          price as decimal(10,2),",
+				"          total_amount as decimal(10,2),",
+				"          order_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> FactOrders",
+				"DimCategory filter(!isNull(category_id)&&!isNull(category_name)) ~> FilterCat",
+				"DimCustomer filter(!isNull(customer_id)) ~> FilterCust",
+				"DimProduct filter(!isNull(product_id)) ~> FilterProd",
+				"FilterCust derive(country = upper(country)) ~> derivedColumnCountry",
+				"derivedColumnCountry derive(gender = iif(gender=='M', 'Male', 'Female')) ~> derivedColumnGender",
+				"derivedColumnGender derive(age_category = iif(age<18,'Teen', \r",
+				"    iif(age<40,'Adult','Senior'))) ~> derivedColumnAgegroup",
+				"FilterProd select(mapColumn(",
+				"          product_id,",
+				"          product_name,",
+				"          category_name = category",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select",
+				"derivedColumnAgegroup derive(first_name = split(full_name, ' ')[1]) ~> derivedColumnFirstname",
+				"derivedColumnFirstname select(mapColumn(",
+				"          customer_id,",
+				"          first_name,",
+				"          full_name,",
+				"          gender,",
+				"          age,",
+				"          age_category,",
+				"          country",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> ReorderCols",
+				"FactOrders cast(output(",
+				"          price as integer",
+				"     ),",
+				"     errors: true) ~> castPrice",
+				"castPrice cast(output(",
+				"          total_amount as integer",
+				"     ),",
+				"     errors: true) ~> casttotalamt",
+				"FilterCat alterRow(upsertIf(2==2)) ~> alterRow1",
+				"ReorderCols alterRow(upsertIf(0==0)) ~> alterRow2",
+				"select alterRow(upsertIf(1==1)) ~> alterRow3",
+				"DimSupplier alterRow(upsertIf(3==3)) ~> alterRow4",
+				"casttotalamt alterRow(upsertIf(4==4)) ~> alterRow5",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimCategory',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['category_id'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1",
+				"alterRow2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimCustomer',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['customer_id'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink2",
+				"alterRow3 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimProduct',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['product_id'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink3",
+				"alterRow4 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimSupplier',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['supplier_id'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink4",
+				"alterRow5 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'FactOrders',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['order_id'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink5"
+			]
+		}
+	}
+}

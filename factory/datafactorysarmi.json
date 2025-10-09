@@ -1,0 +1,9 @@
+{
+	"name": "datafactorysarmi",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "82503ffb-5766-4fb5-9b50-07055c0a8547",
+		"tenantId": "90ac1d9a-a23e-4e53-b150-1fadc3010540"
+	}
+}

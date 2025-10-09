@@ -1,0 +1,280 @@
+{
+	"name": "Data Serving",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "DimProduct"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "DimCustomer"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "FactOrders"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "FactOrder"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ProductJoin"
+				},
+				{
+					"name": "select"
+				},
+				{
+					"name": "AggregateProd"
+				},
+				{
+					"name": "Ranking"
+				},
+				{
+					"name": "filterTop5"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "Customer"
+				},
+				{
+					"name": "Reorder"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "aggregateCust"
+				},
+				{
+					"name": "Rank"
+				},
+				{
+					"name": "filterTop"
+				},
+				{
+					"name": "ReorderCols"
+				},
+				{
+					"name": "alterRow2"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          product_id as short,",
+				"          product_name as string,",
+				"          category_name as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimProduct') ~> DimProduct",
+				"source(output(",
+				"          customer_id as short,",
+				"          first_name as string,",
+				"          full_name as string,",
+				"          gender as string,",
+				"          age as short,",
+				"          age_category as string,",
+				"          country as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimCustomer') ~> DimCustomer",
+				"source(output(",
+				"          order_id as integer,",
+				"          customer_id as integer,",
+				"          product_id as integer,",
+				"          supplier_id as integer,",
+				"          category_id as integer,",
+				"          order_date as date,",
+				"          quantity as integer,",
+				"          price as integer,",
+				"          total_amount as integer,",
+				"          order_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'FactOrders') ~> FactOrders",
+				"source(output(",
+				"          order_id as integer,",
+				"          customer_id as integer,",
+				"          product_id as integer,",
+				"          supplier_id as integer,",
+				"          category_id as integer,",
+				"          order_date as date,",
+				"          quantity as integer,",
+				"          price as integer,",
+				"          total_amount as integer,",
+				"          order_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'FactOrders') ~> FactOrder",
+				"FactOrders, DimProduct join(FactOrders@product_id == DimProduct@product_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> ProductJoin",
+				"ProductJoin select(mapColumn(",
+				"          order_id,",
+				"          customer_id,",
+				"          product_id = FactOrders@product_id,",
+				"          supplier_id,",
+				"          category_id,",
+				"          order_date,",
+				"          quantity,",
+				"          price,",
+				"          total_amount,",
+				"          order_status,",
+				"          product_name,",
+				"          category_name",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select",
+				"select aggregate(groupBy(product_name,",
+				"          category_name),",
+				"     Total_quantity = sum(quantity),",
+				"          Amount = sum(total_amount)) ~> AggregateProd",
+				"AggregateProd window(desc(Amount, true),",
+				"     Top = denseRank()) ~> Ranking",
+				"Ranking filter(Top<6) ~> filterTop5",
+				"Reorder alterRow(insertIf(0==0)) ~> alterRow1",
+				"FactOrder, DimCustomer join(FactOrder@customer_id == DimCustomer@customer_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> Customer",
+				"filterTop5 select(mapColumn(",
+				"          Top,",
+				"          product_name,",
+				"          category_name,",
+				"          Total_quantity,",
+				"          Amount",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> Reorder",
+				"Customer select(mapColumn(",
+				"          order_id,",
+				"          customer_id = FactOrder@customer_id,",
+				"          product_id,",
+				"          supplier_id,",
+				"          category_id,",
+				"          order_date,",
+				"          quantity,",
+				"          price,",
+				"          total_amount,",
+				"          order_status,",
+				"          first_name,",
+				"          full_name,",
+				"          gender,",
+				"          age,",
+				"          age_category,",
+				"          country",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 aggregate(groupBy(full_name,",
+				"          gender,",
+				"          age_category),",
+				"     Amount = sum(total_amount)) ~> aggregateCust",
+				"aggregateCust window(desc(Amount, true),",
+				"     Top = denseRank()) ~> Rank",
+				"Rank filter(Top<6) ~> filterTop",
+				"filterTop select(mapColumn(",
+				"          Top,",
+				"          Name = full_name,",
+				"          gender,",
+				"          age_category,",
+				"          Amount",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> ReorderCols",
+				"ReorderCols alterRow(insertIf(0==0)) ~> alterRow2",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'gold',",
+				"     folderPath: 'BusinessViews',",
+				"     overwrite: true,",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     upsertable: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1",
+				"alterRow2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'gold',",
+				"     folderPath: 'BusinessViews',",
+				"     overwrite: true,",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     upsertable: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink2"
+			]
+		}
+	}
+}
